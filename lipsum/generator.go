@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
-	"sync"
+	"sync/atomic"
 
 	"github.com/daichi-m/lipsum/assets"
 )
@@ -41,27 +41,23 @@ const (
 	newline = "\n"
 )
 
+/* lipsum is a concrete implementation of Generator. It uses an atomic counter to
+read the dictionary, hence it is thread safe */
 type lipsum struct {
 	dictionary []string
-	idx        int
+	idxCtr     int64
 	dictLen    int
-	mx         sync.Mutex
-	threadSafe bool
 }
 
-func (l *lipsum) updateIdx() {
-	if l.threadSafe {
-		l.mx.Lock()
-		defer l.mx.Unlock()
-	}
-	nx := (l.idx + 1) % (l.dictLen)
-	l.idx = nx
-	return
+func (l *lipsum) updateIdx() int {
+	idx := atomic.AddInt64(&l.idxCtr, 1)
+	idx = idx % int64(l.dictLen)
+	return int(idx)
 }
 
 func (l *lipsum) Word() string {
-	word := l.dictionary[l.idx]
-	l.updateIdx()
+	idx := l.updateIdx()
+	word := l.dictionary[idx]
 	return word
 }
 
@@ -117,9 +113,8 @@ func NewGenerator(threadSafe bool) (Generator, error) {
 	dict := regex.Split(string(wordsStr), -1)
 	return &lipsum{
 		dictionary: dict,
-		idx:        0,
+		idxCtr:     int64(-1),
 		dictLen:    len(dict),
-		threadSafe: threadSafe,
 	}, nil
 }
 

@@ -5,7 +5,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+
+	badgery "github.com/dgraph-io/badger/v2/y"
 )
 
 // Input struct encapsulates the input parameters of command line
@@ -15,8 +18,8 @@ type Input struct {
 	Count int
 
 	// internal field
-	fileCtr   int
 	generator Generator
+	throttle  *badgery.Throttle
 }
 
 // Export the standard file sizes
@@ -28,7 +31,7 @@ const (
 	TB = 1024 * GB
 )
 
-const fileNamePattern = "lipsum_%04d.txt"
+const fileNamePattern = "%s_%03d.txt"
 const maxFileSize = 500 * MB
 const maxCount = 200
 
@@ -47,13 +50,16 @@ func (inp *Input) Validate() error {
 	if inp.Size > maxFileSize {
 		return fmt.Errorf("Size of each file cannot exceed %d MB", maxFileSize/MB)
 	}
+	if (len(inp.File) == 0 || inp.File == "-") && inp.Count != 1 {
+		return fmt.Errorf("Count of file cannot be provided when output to stdout")
+	}
 
 	if len(inp.File) == 0 {
 		inp.File = "-"
 	}
-	inp.fileCtr = 1
 	var err error
 	inp.generator, err = NewGenerator(false)
+	inp.throttle = badgery.NewThrottle(2 * runtime.NumCPU())
 	if err != nil {
 		return err
 	}
@@ -63,28 +69,37 @@ func (inp *Input) Validate() error {
 // GenerateOut generates the output files for the given Input parameters.
 func (inp *Input) GenerateOut() error {
 	for ctr := 1; ctr <= inp.Count; ctr++ {
-		file, err := inp.createFile()
-		if err != nil {
-			return err
-		}
-		c, err := inp.generateContent()
-		if err != nil {
-			return err
-		}
-		sz, err := file.WriteString(c)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-		log.Printf("%d MB content written in %s file", (sz / MB), file.Name())
+		inp.throttle.Do()
+		go inp.generateFile(ctr)
 	}
-	return nil
+	return inp.throttle.Finish()
 }
 
-func (inp *Input) createFile() (*os.File, error) {
+// generateFile generates the i-th file of size Input.Size
+func (inp *Input) generateFile(idx int) {
+
+	file, err := inp.createFile(idx)
+	if err != nil {
+		inp.throttle.Done(err)
+	}
+	c, err := inp.generateContent()
+	if err != nil {
+		inp.throttle.Done(err)
+	}
+	sz, err := file.WriteString(c)
+	if err != nil {
+		inp.throttle.Done(err)
+	}
+	err = file.Close()
+	if err != nil {
+		inp.throttle.Done(err)
+	}
+	log.Printf("%d MB content written in %s file", (sz / MB), file.Name())
+	inp.throttle.Done(nil)
+}
+
+// createFile will open the corresponding file for writing
+func (inp *Input) createFile(idx int) (*os.File, error) {
 	if len(inp.File) == 0 || inp.File == "-" {
 		return os.Stdout, nil
 	}
@@ -94,19 +109,16 @@ func (inp *Input) createFile() (*os.File, error) {
 		return os.Create(path)
 	}
 
-	if inp.fileCtr > inp.Count {
-		return nil, fmt.Errorf("The file counter has exceeded the count of files, stop generating")
-	}
-
 	err := os.MkdirAll(path, os.ModeDir|0755)
 	if err != nil {
 		return nil, err
 	}
-	fpath := filepath.Join(path, fmt.Sprintf(fileNamePattern, inp.fileCtr))
-	inp.fileCtr++
+	base := filepath.Base(path)
+	fpath := filepath.Join(path, fmt.Sprintf(fileNamePattern, base, idx))
 	return os.Create(fpath)
 }
 
+// generateContent generates a string of Input.Size bytes
 func (inp *Input) generateContent() (string, error) {
 
 	if inp.Size > maxFileSize {

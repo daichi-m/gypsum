@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strconv"
 
-	lipsum "github.com/daichi-m/lipsum/lipsum"
+	lipsum "github.com/daichi-m/gypsum/lipsum"
 	flag "github.com/spf13/pflag"
 )
 

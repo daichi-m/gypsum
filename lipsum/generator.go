@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/daichi-m/lipsum/assets"
+	"github.com/daichi-m/gypsum/assets"
 )
 
 /*Generator is the primary interface that exposes the different generators for word, sentence and

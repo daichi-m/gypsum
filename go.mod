@@ -1,4 +1,4 @@
-module github.com/daichi-m/lipsum
+module github.com/daichi-m/gypsum
 
 go 1.14
 

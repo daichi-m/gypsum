@@ -1,0 +1,18 @@
+language: go
+dist: bionic
+
+go:
+  - "1.14.x"
+
+env:
+  - GO111MODULE=on
+  - GOOS=darwin
+  - GOOS=linux
+
+
+script:
+  # - go test -covermode atomic -coverprofile coverage.txt .
+  - go build -o gypsum
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

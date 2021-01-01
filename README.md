@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/daichi-m/gypsum.svg?branch=main)](https://travis-ci.com/daichi-m/gypsum)
 # Gypsum
 
 Gypsum is a Lorem-Ipsum text and file generator written in Go.

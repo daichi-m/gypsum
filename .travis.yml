@@ -5,9 +5,8 @@ go:
   - "1.14.x"
 
 env:
-  - GO111MODULE=on
-  - GOOS=darwin
-  - GOOS=linux
+  - GO111MODULE=on GOOS=darwin
+  - GO111MODULE=on GOOS=linux
 
 
 script:

@@ -23,7 +23,6 @@ func main() {
 }
 
 func scanInputs() (*lipsum.Input, error) {
-
 	out := flag.StringP("out", "o", "-",
 		"The file or directory in which the generated text would be stored")
 	size := flag.StringP("size", "s", "10M", "Size of each file generated")
@@ -47,7 +46,6 @@ func scanInputs() (*lipsum.Input, error) {
 		return nil, err
 	}
 	return &input, nil
-
 }
 
 func convertSize(size string) (int, error) {
@@ -66,7 +64,7 @@ func convertSize(size string) (int, error) {
 	suf, ok := match["Suffix"]
 	if !ok {
 		suf = "B"
-		log.Println("Could not decode suffix for %s, defaulting to byte", size)
+		log.Printf("Could not decode suffix for %s, defaulting to byte", size)
 	}
 
 	switch suf {

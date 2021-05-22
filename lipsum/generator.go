@@ -49,18 +49,22 @@ type lipsum struct {
 	dictLen    int
 }
 
+var _ Generator = &lipsum{}
+
 func (l *lipsum) updateIdx() int {
 	idx := atomic.AddInt64(&l.idxCtr, 1)
 	idx = idx % int64(l.dictLen)
 	return int(idx)
 }
 
+// Word returns the next word from the lorem ipsum dictionary.
 func (l *lipsum) Word() string {
 	idx := l.updateIdx()
 	word := l.dictionary[idx]
 	return word
 }
 
+// WordN returns the next word padded/trimmed to length n from the lorem ipsum dictionary
 func (l *lipsum) WordN(n int) string {
 	word := l.Word()
 
@@ -117,5 +121,3 @@ func NewGenerator(threadSafe bool) (Generator, error) {
 		dictLen:    len(dict),
 	}, nil
 }
-
-var _ Generator = &lipsum{}
